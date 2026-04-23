@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>智能书签 - 设置</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 18px; }
+    label { display: block; margin: 14px 0 4px; font-size: 13px; font-weight: 500; }
+    input[type=text], input[type=password], textarea {
+      width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit;
+    }
+    textarea { min-height: 160px; font-family: ui-monospace, Menlo, monospace; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+    .row input[type=checkbox] { margin: 0; }
+    .row label { margin: 0; font-weight: normal; }
+    button { margin-top: 16px; padding: 8px 16px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    button:hover { background: #1765c7; }
+    .status { margin-left: 12px; color: #137333; font-size: 13px; }
+    .hint { color: #888; font-size: 12px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>智能书签 设置</h1>
+
+  <div class="hint" style="background:#fff8e1; padding:10px; border-radius:4px; line-height:1.6;">
+    本扩展需要一个 OpenAI 兼容的 LLM API。推荐 Kimi（直连、便宜），也支持 DeepSeek / OpenAI / 其他兼容接口。<br />
+    获取 API Key：
+    <a href="https://platform.moonshot.cn/console/api-keys" target="_blank">Moonshot / Kimi</a> ·
+    <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek</a> ·
+    <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a>
+  </div>
+
+  <label for="apiKey">API Key</label>
+  <input type="password" id="apiKey" placeholder="sk-..." />
+  <div class="hint">仅保存在你本机的 chrome.storage.local，不会上传到任何第三方服务器</div>
+
+  <label for="model">模型</label>
+  <input type="text" id="model" />
+  <div class="hint">
+    Kimi: <code>moonshot-v1-8k</code> / <code>moonshot-v1-32k</code> / <code>kimi-k2-0905-preview</code> ·
+    DeepSeek: <code>deepseek-chat</code> ·
+    OpenAI: <code>gpt-4o-mini</code>
+  </div>
+
+  <label for="baseUrl">API Base URL</label>
+  <input type="text" id="baseUrl" />
+  <div class="hint">
+    Kimi: <code>https://api.moonshot.cn/v1</code> ·
+    DeepSeek: <code>https://api.deepseek.com/v1</code> ·
+    OpenAI: <code>https://api.openai.com/v1</code>
+  </div>
+
+  <div class="row">
+    <input type="checkbox" id="enabled" />
+    <label for="enabled">启用自动处理</label>
+  </div>
+
+  <div class="row">
+    <input type="checkbox" id="respectManual" />
+    <label for="respectManual">尊重用户手动修改（弹窗中改过名称或文件夹则不覆盖）</label>
+  </div>
+
+  <div class="row">
+    <input type="checkbox" id="allowCreateFolder" />
+    <label for="allowCreateFolder">允许自动新建文件夹</label>
+  </div>
+
+  <label for="manualEditWindowMs">手动修改检测窗口（毫秒）</label>
+  <input type="text" id="manualEditWindowMs" />
+  <div class="hint">添加书签后等待多少毫秒再调用 LLM，期间若用户修改则视为手动操作</div>
+
+  <label for="systemPrompt">系统提示词</label>
+  <textarea id="systemPrompt"></textarea>
+
+  <div>
+    <button id="save">保存</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { width: 340px; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; margin: 0; padding: 12px; font-size: 13px; color: #222; }
+    h2 { font-size: 14px; margin: 0; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .item { border-top: 1px solid #eee; padding: 8px 0; }
+    .item .title { font-weight: 500; word-break: break-all; }
+    .item .meta { color: #888; font-size: 11px; margin-top: 2px; word-break: break-all; }
+    .empty { color: #888; text-align: center; padding: 20px 0; }
+    button.link { background: none; border: none; color: #1a73e8; cursor: pointer; font-size: 12px; padding: 0; }
+    button.link:hover { text-decoration: underline; }
+    label { display: flex; align-items: center; gap: 4px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <h2>智能书签</h2>
+    <label><input type="checkbox" id="enabled" /> 启用</label>
+  </div>
+  <div class="row">
+    <button class="link" id="openOptions">设置</button>
+    <button class="link" id="clearHistory">清空记录</button>
+  </div>
+  <div id="history"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
