@@ -1,3 +1,5 @@
+console.log('[智能书签] Service Worker 已启动 v1.1.0 (toast build)');
+
 const DEFAULT_CONFIG = {
   apiKey: '',
   model: 'moonshot-v1-8k',
@@ -5,6 +7,7 @@ const DEFAULT_CONFIG = {
   enabled: true,
   respectManual: true,
   allowCreateFolder: true,
+  showToast: true,
   manualEditWindowMs: 1500,
   systemPrompt: `你是一个书签整理助手。根据用户给出的网页信息和现有书签文件夹结构，返回 JSON：
 - name: 简洁的书签名称（去除站点后缀、冗余信息，保留核心主题，15字以内，中文优先）
@@ -119,6 +122,17 @@ async function processBookmark(id) {
       moveNote = 'LLM 未返回 folderPath';
     }
     if (moveNote) console.log('[智能书签]', moveNote);
+
+    const didRename = newTitle !== bm.title;
+    const didMove = !!movedTo;
+    console.log('[智能书签] Toast 条件:', { showToast: cfg.showToast, didRename, didMove });
+    if (cfg.showToast && (didRename || didMove)) {
+      showToast({
+        name: newTitle,
+        folderPath: movedTo || '(原位置)',
+        didMove
+      });
+    }
 
     await appendHistory({
       id,
@@ -278,4 +292,225 @@ async function appendHistory(entry) {
   history.unshift(entry);
   if (history.length > 50) history.length = 50;
   await chrome.storage.local.set({ history });
+}
+
+async function showToast(payload) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    console.log('[智能书签] Toast 目标标签:', tab?.url);
+    if (!tab?.id) { console.log('[智能书签] Toast 跳过: 无活动标签'); return; }
+    const url = tab.url || '';
+    if (/^(chrome|edge|about|chrome-extension|chrome-search|devtools):/i.test(url)) {
+      console.log('[智能书签] Toast 跳过: 受限页面', url);
+      return;
+    }
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: renderToastInPage,
+      args: [payload]
+    });
+    console.log('[智能书签] Toast 注入成功');
+  } catch (e) {
+    console.warn('[智能书签] Toast 注入失败:', e.message);
+  }
+}
+
+// 注入到页面的函数 — 必须自包含，不能引用外部变量
+function renderToastInPage(data) {
+  const existing = document.getElementById('__smart_bookmark_toast__');
+  if (existing) existing.remove();
+
+  const host = document.createElement('div');
+  host.id = '__smart_bookmark_toast__';
+  host.style.cssText = 'position:fixed;top:0;right:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
+  const shadow = host.attachShadow({ mode: 'closed' });
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .wrap {
+      position: fixed; top: 20px; right: 20px;
+      pointer-events: auto;
+      animation: bmSlide 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+    }
+    @keyframes bmSlide {
+      from { transform: translateX(130%) scale(0.8); opacity: 0; }
+      to { transform: translateX(0) scale(1); opacity: 1; }
+    }
+    @keyframes bmSlideOut {
+      from { transform: translateX(0) scale(1); opacity: 1; }
+      to { transform: translateX(130%) scale(0.9); opacity: 0; }
+    }
+    .card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 20px 14px 14px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,248,243,0.98));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(217, 119, 87, 0.15);
+      border-radius: 16px;
+      box-shadow:
+        0 14px 40px rgba(217, 119, 87, 0.18),
+        0 4px 12px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+      min-width: 260px;
+      max-width: 360px;
+    }
+    .pet-box {
+      width: 58px; height: 52px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .pet-shadow {
+      position: absolute; left: 50%; bottom: 1px;
+      width: 42px; height: 4px;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at center, rgba(90, 40, 22, 0.32), transparent 70%);
+      animation: bmShadow 0.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes bmShadow {
+      0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.55; }
+      50%     { transform: translateX(-50%) scaleX(0.72); opacity: 0.28; }
+    }
+    .pet {
+      width: 58px; height: 44px;
+      shape-rendering: crispEdges;
+      display: block;
+      animation: bmHop 0.6s cubic-bezier(0.25, 1.6, 0.4, 1) both;
+    }
+    @keyframes bmHop {
+      0%   { transform: translate(24px, -4px) scale(0.6); opacity: 0; }
+      60%  { transform: translate(0, -5px) scale(1.08); opacity: 1; }
+      100% { transform: translate(0, 0) scale(1); opacity: 1; }
+    }
+    .leg-a { animation: bmLegA 0.5s ease-in-out infinite 0.6s; }
+    .leg-b { animation: bmLegB 0.5s ease-in-out infinite 0.6s; }
+    @keyframes bmLegA {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
+    @keyframes bmLegB {
+      0%, 100% { transform: translateY(-3px); }
+      50%      { transform: translateY(0); }
+    }
+    .arm {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: bmArm 1s ease-in-out infinite 0.6s;
+    }
+    @keyframes bmArm {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50%      { transform: translateY(-1px) rotate(-6deg); }
+    }
+    .eye {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: bmBlink 3.5s ease-in-out infinite 1.5s;
+    }
+    @keyframes bmBlink {
+      0%, 88%, 100% { transform: scaleY(1); }
+      93%, 97%      { transform: scaleY(0.15); }
+    }
+    .sparkle {
+      position: absolute;
+      animation: bmSparkle 1.8s ease-in-out infinite;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sparkle.s1 { top: 2px; right: -2px; animation-delay: 0.8s; }
+    .sparkle.s2 { top: 26px; left: -4px; animation-delay: 1.5s; }
+    @keyframes bmSparkle {
+      0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+      40%      { opacity: 1; transform: scale(1) rotate(180deg); }
+      70%      { opacity: 0; transform: scale(0.4) rotate(360deg); }
+    }
+    .text { flex: 1; min-width: 0; }
+    .title {
+      font-size: 11px; font-weight: 600;
+      color: #D97757; letter-spacing: 0.8px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .name {
+      font-size: 14px; font-weight: 600;
+      color: #2B1810;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-bottom: 3px;
+      line-height: 1.3;
+    }
+    .folder {
+      font-size: 12px; color: #8A4A2D;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .folder-icon { flex-shrink: 0; opacity: 0.7; }
+    .leaving { animation: bmSlideOut 0.4s ease-in forwards; }
+    .close {
+      background: none; border: none; cursor: pointer;
+      padding: 2px; margin: -6px -8px -6px 4px;
+      color: #bbb; font-size: 16px; line-height: 1;
+      border-radius: 4px; transition: all 0.15s;
+    }
+    .close:hover { color: #666; background: rgba(0,0,0,0.05); }
+  `;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="pet-box">
+        <svg class="pet" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg">
+          <g class="body">
+            <rect class="arm" x="0" y="16" width="8" height="8" fill="#C76848"/>
+            <rect class="arm" x="56" y="16" width="8" height="8" fill="#C76848"/>
+            <rect x="12" y="0" width="40" height="4" fill="#C76848"/>
+            <rect x="8" y="4" width="48" height="32" fill="#C76848"/>
+            <rect x="48" y="4" width="4" height="32" fill="#A8513B" opacity="0.45"/>
+            <rect x="8" y="32" width="48" height="4" fill="#A8513B" opacity="0.35"/>
+            <rect class="eye" x="20" y="12" width="8" height="8" fill="#1a1110"/>
+            <rect class="eye" x="36" y="12" width="8" height="8" fill="#1a1110"/>
+            <rect x="22" y="14" width="2" height="2" fill="#fff"/>
+            <rect x="38" y="14" width="2" height="2" fill="#fff"/>
+          </g>
+          <rect class="leg-a" x="8" y="36" width="8" height="8" fill="#C76848"/>
+          <rect class="leg-b" x="20" y="36" width="8" height="8" fill="#C76848"/>
+          <rect class="leg-b" x="36" y="36" width="8" height="8" fill="#C76848"/>
+          <rect class="leg-a" x="48" y="36" width="8" height="8" fill="#C76848"/>
+        </svg>
+        <div class="pet-shadow"></div>
+        <svg class="sparkle s1" width="10" height="10" viewBox="0 0 10 10">
+          <path d="M 5 0 L 6 4 L 10 5 L 6 6 L 5 10 L 4 6 L 0 5 L 4 4 Z" fill="#FFD27D"/>
+        </svg>
+        <svg class="sparkle s2" width="8" height="8" viewBox="0 0 10 10">
+          <path d="M 5 0 L 6 4 L 10 5 L 6 6 L 5 10 L 4 6 L 0 5 L 4 4 Z" fill="#FFA56A"/>
+        </svg>
+      </div>
+      <div class="text">
+        <div class="title">已智能整理</div>
+        <div class="name"></div>
+        <div class="folder">
+          <svg class="folder-icon" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M1.5 3.5A1.5 1.5 0 0 1 3 2h3.5L8 3.5h5A1.5 1.5 0 0 1 14.5 5v7A1.5 1.5 0 0 1 13 13.5H3A1.5 1.5 0 0 1 1.5 12V3.5z"/>
+          </svg>
+          <span class="folder-text"></span>
+        </div>
+      </div>
+      <button class="close" aria-label="关闭">×</button>
+    </div>
+  `;
+
+  wrap.querySelector('.name').textContent = data.name || '';
+  wrap.querySelector('.folder-text').textContent = data.folderPath || '';
+
+  const dismiss = () => {
+    wrap.classList.add('leaving');
+    setTimeout(() => host.remove(), 420);
+  };
+  wrap.querySelector('.close').addEventListener('click', dismiss);
+
+  shadow.appendChild(style);
+  shadow.appendChild(wrap);
+  document.documentElement.appendChild(host);
+
+  setTimeout(dismiss, 3800);
 }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "智能书签 - 自动命名与分类",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "添加书签时自动重命名并归入合适文件夹。支持 Kimi/DeepSeek/OpenAI 等 OpenAI 兼容接口。",
   "permissions": ["bookmarks", "storage", "tabs", "scripting"],
   "host_permissions": [

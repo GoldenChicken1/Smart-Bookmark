@@ -1,4 +1,4 @@
-const KEYS = ['apiKey', 'model', 'baseUrl', 'enabled', 'respectManual', 'allowCreateFolder', 'manualEditWindowMs', 'systemPrompt'];
+const KEYS = ['apiKey', 'model', 'baseUrl', 'enabled', 'respectManual', 'allowCreateFolder', 'showToast', 'manualEditWindowMs', 'systemPrompt'];
 
 async function load() {
   const cfg = await chrome.storage.local.get(KEYS);
